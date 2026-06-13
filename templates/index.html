@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紧固件AI知识问答</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+        }
+
+        .header .logo {
+            font-size: 28px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header .subtitle {
+            font-size: 13px;
+            opacity: 0.75;
+            margin-left: 8px;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-actions button {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 7px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .header-actions button:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* 主布局 */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 280px;
+            background: #fff;
+            border-right: 1px solid #e8e8e8;
+            padding: 20px 16px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .suggestion-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #f7f8fa;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            transition: all 0.2s;
+            line-height: 1.5;
+        }
+
+        .suggestion-item:hover {
+            background: #eef1f6;
+            border-color: #1a73e8;
+            transform: translateX(3px);
+        }
+
+        .suggestion-item .icon {
+            margin-right: 6px;
+        }
+
+        .knowledge-tree {
+            margin-top: 24px;
+        }
+
+        .knowledge-category {
+            font-size: 13px;
+            color: #555;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .knowledge-category:hover {
+            background: #f0f4ff;
+            color: #1a73e8;
+        }
+
+        /* 聊天区域 */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            border-left: 1px solid #eee;
+            border-right: 1px solid #eee;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #d0d5dd;
+            border-radius: 3px;
+        }
+
+        /* 消息气泡 */
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            color: #fff;
+        }
+
+        .message.assistant .avatar {
+            background: linear-gradient(135deg, #0f3460, #1a1a2e);
+            color: #fff;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.7;
+            word-wrap: break-word;
+        }
+
+        .message.user .bubble {
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .bubble {
+            background: #f5f6f8;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* Markdown样式 */
+        .bubble h1, .bubble h2, .bubble h3, .bubble h4 {
+            margin: 12px 0 8px;
+            font-weight: 600;
+        }
+
+        .bubble h2 { font-size: 16px; }
+        .bubble h3 { font-size: 15px; }
+
+        .bubble p {
+            margin: 6px 0;
+        }
+
+        .bubble ul, .bubble ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .bubble li {
+            margin: 4px 0;
+        }
+
+        .bubble code {
+            background: rgba(0,0,0,0.06);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+        }
+
+        .bubble pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 14px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .bubble table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .bubble th, .bubble td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .bubble th {
+            background: #f0f4ff;
+            font-weight: 600;
+            color: #1a73e8;
+        }
+
+        .bubble td {
+            background: #fff;
+        }
+
+        .bubble blockquote {
+            border-left: 3px solid #1a73e8;
+            padding: 8px 14px;
+            margin: 8px 0;
+            background: #f8f9fb;
+            border-radius: 0 6px 6px 0;
+            color: #555;
+        }
+
+        .bubble strong {
+            color: #1a1a2e;
+        }
+
+        .bubble hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 14px 0;
+        }
+
+        /* 输入区域 */
+        .chat-input-area {
+            border-top: 1px solid #eee;
+            padding: 16px 24px;
+            background: #fff;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            background: #f5f6f8;
+            border-radius: 24px;
+            padding: 6px 6px 6px 18px;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+            align-items: center;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #1a73e8;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(26,115,232,0.1);
+        }
+
+        .input-wrapper input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 14px;
+            color: #333;
+            padding: 8px 0;
+        }
+
+        .input-wrapper input::placeholder {
+            color: #aaa;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            color: #fff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(26,115,232,0.4);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* 打字指示器 */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #bbb;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+            30% { opacity: 1; transform: translateY(-6px); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .chat-container {
+                max-width: 100%;
+            }
+            .bubble {
+                max-width: 85%;
+            }
+        }
+
+        /* 加载旋转 */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 时间戳 */
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="header">
+        <span class="logo">🔩</span>
+        <h1>紧固件AI知识问答</h1>
+        <span class="subtitle">Fastener Knowledge Assistant</span>
+        <div class="header-actions">
+            <button onclick="clearChat()" title="清除对话">🗑️ 新对话</button>
+        </div>
+    </div>
+
+    <!-- 主体 -->
+    <div class="main-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <h3>💡 推荐问题</h3>
+            <div id="suggestions"></div>
+
+            <div class="knowledge-tree">
+                <h3>📚 知识分类</h3>
+                <div class="knowledge-category" onclick="quickAsk('紧固件有哪些类型？')">
+                    🔩 紧固件分类
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('螺栓的性能等级有哪些？')">
+                    ⚙️ 性能等级
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('紧固件常用材料有哪些？')">
+                    🧱 材料选择
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('螺纹标准有哪些？M公制螺纹')">
+                    📐 螺纹标准
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('紧固件表面处理有哪些方式？')">
+                    🛡️ 表面处理
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('螺栓安装扭矩标准是多少？')">
+                    🔧 安装扭矩
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('紧固件防松措施有哪些？')">
+                    🔒 防松措施
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('什么是氢脆？如何预防？')">
+                    ⚠️ 常见问题
+                </div>
+                <div class="knowledge-category" onclick="quickAsk('紧固件GB标准有哪些？')">
+                    📋 GB标准
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天区 -->
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="questionInput"
+                        placeholder="请输入您想了解的紧固件问题..."
+                        autocomplete="off"
+                        onkeydown="if(event.key==='Enter') sendMessage()"
+                    >
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ 初始化 ============
+        const chatMessages = document.getElementById('chatMessages');
+        const questionInput = document.getElementById('questionInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const suggestionsDiv = document.getElementById('suggestions');
+        let isWaiting = false;
+
+        // 加载欢迎消息
+        async function init() {
+            try {
+                const res = await fetch('/api/welcome');
+                const data = await res.json();
+                addMessage('assistant', data.answer);
+                renderSuggestions(data.suggestions);
+            } catch (e) {
+                addMessage('assistant', '👋 您好！我是紧固件专业知识问答助手。请直接输入您的问题。');
+            }
+        }
+
+        // ============ 消息渲染 ============
+        function addMessage(role, content) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = role === 'user' ? '👤' : '🔩';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = parseMarkdown(content);
+
+            div.appendChild(avatar);
+            div.appendChild(bubble);
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.id = 'typingMsg';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = '🔩';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+
+            div.appendChild(avatar);
+            div.appendChild(bubble);
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typing = document.getElementById('typingMsg');
+            if (typing) typing.remove();
+        }
+
+        // ============ Markdown解析 ============
+        function parseMarkdown(text) {
+            if (!text) return '';
+
+            // 转义HTML
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // 代码块 ```
+            html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+
+            // 行内代码 `
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // 粗体
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+            // 斜体
+            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+            // 标题
+            html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+            // 水平线
+            html = html.replace(/^---$/gm, '<hr>');
+
+            // 引用
+            html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+
+            // 表格
+            html = html.replace(/^\|(.+)\|$/gm, function(match) {
+                const cells = match.split('|').filter(c => c.trim());
+                const isHeader = /^[\s:-]+$/.test(cells.join(''));
+                if (isHeader) return '';
+                const tag = match.includes('---') ? '' : (cells.length > 0 ? '<tr>' + cells.map(c => {
+                    const t = match.includes('---') ? 'th' : 'td';
+                    return `<${t}>${c.trim()}</${t}>`;
+                }).join('') + '</tr>' : '');
+                return tag;
+            });
+
+            // 处理连续表格
+            html = html.replace(/(<tr>[\s\S]*?<\/tr>)+/g, '<table>$&</table>');
+
+            // 无序列表
+            html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+            // 有序列表
+            html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+            // 换行
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+
+            // 包裹段落
+            if (!html.startsWith('<')) {
+                html = '<p>' + html + '</p>';
+            }
+
+            // emoji渲染
+            html = html.replace(/⚠️/g, '<span style="color:#e67e22">⚠️</span>');
+            html = html.replace(/✅/g, '<span style="color:#27ae60">✅</span>');
+            html = html.replace(/❌/g, '<span style="color:#e74c3c">❌</span>');
+
+            return html;
+        }
+
+        // ============ 消息发送 ============
+        async function sendMessage() {
+            if (isWaiting) return;
+
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            // 显示用户消息
+            addMessage('user', question);
+            questionInput.value = '';
+            isWaiting = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="spinner"></span>';
+
+            // 显示打字动画
+            addTypingIndicator();
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+                const data = await res.json();
+
+                removeTypingIndicator();
+                addMessage('assistant', data.answer);
+                if (data.suggestions) renderSuggestions(data.suggestions);
+            } catch (e) {
+                removeTypingIndicator();
+                addMessage('assistant', '抱歉，网络请求失败，请检查服务是否正常运行。');
+            }
+
+            isWaiting = false;
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '➤';
+            questionInput.focus();
+        }
+
+        function quickAsk(question) {
+            questionInput.value = question;
+            sendMessage();
+        }
+
+        // ============ 推荐问题 ============
+        function renderSuggestions(suggestions) {
+            if (!suggestions) return;
+            suggestionsDiv.innerHTML = suggestions.map((s, i) => {
+                const icons = ['🔩', '📐', '⚙️', '🔧', '🛡️', '⚠️', '🔒', '📋'];
+                const icon = icons[i % icons.length];
+                return `<button class="suggestion-item" onclick="quickAsk('${s.replace(/'/g, "\\'")}')">
+                    <span class="icon">${icon}</span>${s}
+                </button>`;
+            }).join('');
+        }
+
+        // ============ 清除对话 ============
+        async function clearChat() {
+            chatMessages.innerHTML = '';
+            try {
+                await fetch('/api/clear', { method: 'POST' });
+                const res = await fetch('/api/welcome');
+                const data = await res.json();
+                addMessage('assistant', data.answer);
+                renderSuggestions(data.suggestions);
+            } catch (e) {
+                addMessage('assistant', '👋 您好！新对话已开始。');
+            }
+        }
+
+        // ============ 启动 ============
+        init();
+        questionInput.focus();
+    </script>
+</body>
+</html>
